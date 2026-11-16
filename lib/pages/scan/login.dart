@@ -2,6 +2,7 @@ import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/scan.dart';
+import 'package:PiliPlus/models/login/scan_login_target.dart';
 import 'package:PiliPlus/pages/login/geetest/geetest_webview_dialog.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:flutter/services.dart';
@@ -12,11 +13,11 @@ import 'package:material_ui/material_ui.dart';
 class ScanLoginPage extends StatefulWidget {
   const ScanLoginPage({
     super.key,
-    required this.qrcodeKey,
+    required this.target,
     required this.account,
   });
 
-  final String qrcodeKey;
+  final ScanLoginTarget target;
   final Account account;
 
   @override
@@ -34,6 +35,8 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
   bool _submitting = false;
   bool _sendingSms = false;
 
+  bool get _isPad => widget.target.type == ScanLoginType.pad;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +44,7 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
   }
 
   Future<void> _load() async {
-    final scene = await _http.scene(widget.qrcodeKey);
+    final scene = await _http.scene(widget.target);
     if (!mounted) return;
     setState(() => _scene = scene);
   }
@@ -88,7 +91,8 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
   Future<void> _confirm(Map<String, dynamic> scene) async {
     setState(() => _submitting = true);
     try {
-      if (scene['verify_tel'] == true &&
+      if (!_isPad &&
+          scene['verify_tel'] == true &&
           (_verifiedCode.isEmpty ||
               _verifiedCode != _codeController.text.trim())) {
         if (_verifyKey.isEmpty || _codeController.text.trim().isEmpty) {
@@ -105,7 +109,7 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
         _verifiedCode = code;
       }
       final res = await _http.confirm(
-        key: widget.qrcodeKey,
+        target: widget.target,
         envKey: _envKey ?? '',
         transient: _transient || _envKey == 'PUBLIC_ENV',
         verifyKey: _verifyKey,
@@ -154,10 +158,11 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
   }
 
   Widget _buildConfirmation(Map<String, dynamic> scene) {
-    final List environments = scene['obtain_env'] == true
+    final List environments = !_isPad && scene['obtain_env'] == true
         ? scene['env_show_list']
         : const [];
     final Map? app = scene['app'];
+    final needUpgrade = _isPad ? widget.target.needUpgrade : '0';
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -166,14 +171,35 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              app == null ? '登录哔哩哔哩网页版' : '登录${app['title']}',
+              _isPad
+                  ? '登录哔哩哔哩 HD / Pad 客户端'
+                  : app == null
+                  ? '登录哔哩哔哩网页版'
+                  : '登录${app['title']}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             Text('授权账号：${widget.account.mid}'),
+            if (_isPad) ...[
+              const SizedBox(height: 16),
+              const Text('请确认正在登录的设备在您身边，并且是您本人操作。'),
+            ],
+            if (needUpgrade == '1' || needUpgrade == '2') ...[
+              const SizedBox(height: 16),
+              Text(
+                needUpgrade == '2'
+                    ? '目标设备的哔哩哔哩版本过低，请更新客户端后重新扫码登录。'
+                    : '目标设备的哔哩哔哩版本过低，部分功能可能无法正常使用，建议更新客户端。',
+              ),
+            ],
             if (scene['location_diff'] == true) ...[
               const SizedBox(height: 16),
               Text('异地登录：${scene['qrcode_location']}'),
+              if (_isPad)
+                Text(
+                  '请核实登录设备和地点，授权他人登录可能导致账号被盗。',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
             ],
             if (environments.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -204,7 +230,7 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
                     ? null
                     : (value) => setState(() => _transient = value!),
               ),
-            if (scene['verify_tel'] == true) ...[
+            if (!_isPad && scene['verify_tel'] == true) ...[
               const SizedBox(height: 16),
               TextField(
                 controller: _codeController,
@@ -225,10 +251,17 @@ class _ScanLoginPageState extends State<ScanLoginPage> {
               onPressed:
                   _submitting ||
                       _sendingSms ||
+                      needUpgrade == '2' ||
                       (environments.isNotEmpty && _envKey == null)
                   ? null
                   : () => _confirm(scene),
-              child: Text(_submitting ? '登录中' : '确认登录'),
+              child: Text(
+                _submitting
+                    ? '登录中'
+                    : needUpgrade == '1'
+                    ? '继续登录'
+                    : '确认登录',
+              ),
             ),
             const SizedBox(height: 8),
             TextButton(

@@ -2,6 +2,7 @@ import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/login/scan_login_target.dart';
 import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:PiliPlus/utils/accounts/account_manager/account_mgr.dart';
 import 'package:PiliPlus/utils/app_sign.dart';
@@ -51,33 +52,48 @@ class ScanHttp {
     }
   }
 
-  Future<LoadingState<Map<String, dynamic>>> scene(String key) async {
+  Future<LoadingState<Map<String, dynamic>>> scene(
+    ScanLoginTarget target,
+  ) async {
+    if (target.type == ScanLoginType.pad) {
+      return _request(
+        Api.scanPadScene,
+        parameters: {'auth_code': target.code},
+      );
+    }
     final checked = await _request(
       Api.scanWebCheck,
-      parameters: {'qrcode_key': key},
+      parameters: target.parameters,
     );
     if (!checked.isSuccess) return checked;
-    return _request(Api.scanWebScene, parameters: {'qrcode_key': key});
+    return _request(Api.scanWebScene, parameters: target.parameters);
   }
 
   Future<LoadingState<Map<String, dynamic>>> confirm({
-    required String key,
+    required ScanLoginTarget target,
     required String envKey,
     required bool transient,
     required String verifyKey,
     required String verifyCode,
-  }) => _request(
-    Api.scanWebConfirm,
-    post: true,
-    parameters: {
-      'qrcode_key': key,
-      'env_key': envKey,
-      'transient': transient.toString(),
-      'verify_type': 'verify_tel',
-      'verify_key': verifyKey,
-      'verify_code': verifyCode,
-    },
-  );
+  }) => switch (target.type) {
+    ScanLoginType.pad => _request(
+      Api.qrcodeConfirm,
+      post: true,
+      parameters: {...target.parameters, 'scanning_type': '1'},
+    ),
+    ScanLoginType.web => _request(
+      Api.scanWebConfirm,
+      post: true,
+      parameters: {
+        ...target.parameters,
+        'env_key': envKey,
+        'transient': transient.toString(),
+        'verify_type': 'verify_tel',
+        'verify_key': verifyKey,
+        'verify_code': verifyCode,
+      },
+    ),
+  };
 
   Future<LoadingState<Map<String, dynamic>>> captcha() =>
       _request(Api.preCapture, post: true);

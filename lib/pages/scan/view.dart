@@ -1,6 +1,7 @@
 import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
 import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/models/login/scan_login_target.dart';
 import 'package:PiliPlus/pages/scan/login.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/app_scheme.dart';
@@ -80,26 +81,18 @@ class _ScanPageState extends State<ScanPage>
     await _controller.stop();
     try {
       final uri = Uri.tryParse(text.trim());
-      final key = uri?.queryParameters['qrcode_key'];
-      final isLogin =
-          uri != null &&
-          (uri.scheme == 'https' || uri.scheme == 'http') &&
-          const {
-            'account.bilibili.com',
-            'app.bilibili.com',
-            'passport.bilibili.com',
-          }.contains(uri.host) &&
-          const {
-            '/h5/account-h5/auth/scan-web',
-            '/qrcode/h5/login',
-          }.contains(uri.path);
-      if (isLogin && key != null && key.isNotEmpty) {
+      final target = uri == null ? null : ScanLoginTarget.fromUri(uri);
+      if (target != null) {
+        if (target.code.isEmpty) {
+          SmartDialog.showToast('登录二维码缺少授权码，请刷新后重新扫描');
+          return;
+        }
         if (!Accounts.main.isLogin) {
           await Get.toNamed('/loginPage');
         }
         if (!mounted || !Accounts.main.isLogin) return;
         final authorized = await Get.to<bool>(
-          () => ScanLoginPage(qrcodeKey: key, account: Accounts.main),
+          () => ScanLoginPage(target: target, account: Accounts.main),
         );
         if (authorized == true && mounted) {
           _visible = false;

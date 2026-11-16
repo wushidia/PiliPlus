@@ -607,17 +607,20 @@ abstract final class Api {
   static const String safeCenterSmsVerify =
       '${HttpString.passBaseUrl}/x/safecenter/login/tel/verify';
 
-  static const String oauth2AccessToken =
+  static const _oauth2AccessTokenApi =
       '${HttpString.passBaseUrl}/x/passport-login/oauth2/access_token';
+  static const String oauth2AccessToken = _oauth2AccessTokenApi;
 
   /// 密码加密密钥
   /// disable_rcmd
   /// local_id
   static const getWebKey = '${HttpString.passBaseUrl}/x/passport-login/web/key';
 
-  /// cookie转access_key
+  /// HD / Pad 扫码授权（auth_code）
   static const qrcodeConfirm =
       '${HttpString.passBaseUrl}/x/passport-tv-login/h5/qrcode/confirm';
+  static const scanPadScene =
+      '${HttpString.passBaseUrl}/x/passport-tv-login/h5/qrcode/scene';
 
   static const scanWebCheck =
       '${HttpString.passBaseUrl}/x/passport-login/web/qrcode/check';
@@ -653,7 +656,8 @@ abstract final class Api {
   static const getRecentLikeVideoApi = '/x/space/like/video';
 
   /// 用户专栏
-  static const getMemberSeasonsApi = '/x/polymer/web-space/home/seasons_series';
+  static const _webSpaceHome = '/x/polymer/web-space/home';
+  static const getMemberSeasonsApi = '$_webSpaceHome/seasons_series';
 
   /// 获赞数 播放数
   /// mid
@@ -1030,4 +1034,30 @@ abstract final class Api {
 
   static const String liveMasterInfo =
       '${HttpString.liveBaseUrl}/live_user/v1/Master/info';
+
+  static const String _liveTrace =
+      '${HttpString.liveTraceBaseUrl}/xlive/data-interface/v1/x25Kn';
+
+  static const String liveTraceE = '$_liveTrace/E';
+
+  static const String liveTraceX = '$_liveTrace/X';
+
+  static const String _fansMedal =
+      '${HttpString.liveBaseUrl}/xlive/app-ucenter/v1/fansMedal';
+
+  static const String fansMedalPanel = '$_fansMedal/panel';
+
+  static const String userMedalInfo = '$_fansMedal/user_medal_info';
+
+  static const String wearFansMedal = '$_fansMedal/wear';
+
+  static const String takeOffFansMedal = '$_fansMedal/take_off';
+
+  static const String delFansMedal = '$_fansMedal/web_room/del_medal';
+
+  static const String liveConfigPlugs =
+      '${HttpString.liveBaseUrl}/xlive/web-ucenter/v1/labs/ConfigPlugs';
+
+  static const String liveEditPlugs =
+      '${HttpString.liveBaseUrl}/xlive/web-ucenter/v1/labs/EditPlugs';
 }
